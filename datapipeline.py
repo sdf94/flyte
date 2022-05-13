@@ -38,7 +38,7 @@ def apply_types(df: pd.DataFrame) -> pd.DataFrame:
                               'o_group':str})
 
 @task
-def my_task(
+def download_file(
        dataset: str
 ) -> pd.DataFrame:
     urllib.request.urlretrieve(dataset, DATASET_LOCAL)
@@ -57,7 +57,7 @@ def file_wf(
    dataset: str
     = DATASET_REMOTE
 ) -> pd.DataFrame:
-   df = my_task(dataset=dataset)
+   df = download_file(dataset=dataset)
    df = filter_columns(df=df)
    df = clean_data(df=df)
    df = filter_states(df=df)
