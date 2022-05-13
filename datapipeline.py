@@ -1,11 +1,13 @@
 import pandas as pd
 from flytekit import Resources, kwtypes, task, workflow
 from flytekit.types.file import FlyteFile
+import urllib
 import typing 
 
 DATASET_LOCAL = "salary.csv"
+DATASET_REMOTE = "https://raw.githubusercontent.com/sdf94/flyte/master/salary.csv"
 
-@task(cache=True, cache_version="1.0")
+@task
 def clean_data(df: pd.DataFrame) -> pd.DataFrame:
     df = df.dropna()
     df = df.drop_duplicates()
@@ -14,13 +16,13 @@ def clean_data(df: pd.DataFrame) -> pd.DataFrame:
     df = df[(df != '#').all(1)]
     return df
 
-@task(cache=True, cache_version="1.0")
+@task
 def filter_states(df: pd.DataFrame) -> pd.DataFrame:
     df = df[df['area_title'].str.contains("WA|OR|CA|PA|TX|GA|FL|MI|")]
     df = df[df['area_title'].str.contains("-")]
     return df
 
-@task(cache=True, cache_version="1.0")
+@task
 def apply_types(df: pd.DataFrame) -> pd.DataFrame:
     return df.astype({"area_title": 'object',
                               "occ_title": 'object', 
@@ -35,13 +37,15 @@ def apply_types(df: pd.DataFrame) -> pd.DataFrame:
                               "year":'object',
                               'o_group':str})
 
-@task(cache=True, cache_version="1.0")
+@task
 def my_task(
-       dataset: FlyteFile[typing.TypeVar("csv")]
+       dataset: str
 ) -> pd.DataFrame:
-   return pd.read_csv(dataset)
+    urllib.request.urlretrieve(dataset, DATASET_LOCAL)
+    df = pd.read_csv(DATASET_LOCAL)
+    return df
 
-@task(cache=True, cache_version="1.0")
+@task
 def filter_columns(
       df: pd.DataFrame) -> pd.DataFrame: 
     return df[['area_title','occ_title', 'tot_emp',  'jobs_1000', 'a_mean', 'a_pct10', 'a_pct25',
@@ -50,9 +54,8 @@ def filter_columns(
 
 @workflow
 def file_wf(
-   dataset: FlyteFile[
-       typing.TypeVar("csv")
-   ] = DATASET_LOCAL,
+   dataset: str
+    = DATASET_REMOTE
 ) -> pd.DataFrame:
    df = my_task(dataset=dataset)
    df = filter_columns(df=df)
